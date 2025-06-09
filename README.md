@@ -1,0 +1,1 @@
+# snowflake_cortex_analyst_demo_v2
