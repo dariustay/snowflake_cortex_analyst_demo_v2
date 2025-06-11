@@ -33,11 +33,19 @@ CHART_MAX_TOKENS  = 750
 
 def send_message(prompt: str) -> Dict[str, Any]:
     """
-    Send a user prompt to the Snowflake Cortex Analyst API and return the parsed JSON response.
+    Send a user prompt with the chat history to the Snowflake Cortex Analyst API and return the parsed JSON response.
     """
     
+    messages_payload = [
+        {
+            "role": "analyst" if msg["role"] == "assistant" else msg["role"],
+            "content": msg["content"]
+        }
+        for msg in st.session_state.messages
+    ]
+
     request_body = {
-        "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+        "messages": messages_payload,
         "semantic_model_file": f"@{DATABASE}.{SCHEMA}.{STAGE}/{FILE}",
     }
 
