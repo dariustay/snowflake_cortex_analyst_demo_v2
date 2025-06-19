@@ -1,12 +1,11 @@
 import json
-import streamlit as st
 import _snowflake
 import pandas as pd
-
+import streamlit as st
+import concurrent.futures
 from typing import Any, Dict, List
-
 from utils.snowflake_utils import session, get_cached_df
-from utils.llm_utils import get_chart_code, get_summary
+from utils.llm_utils import get_chart_code, get_summary, get_insights
 from utils.chart_utils import execute_plotly_code
 
 
@@ -160,28 +159,45 @@ def display_data_and_chart(df: pd.DataFrame) -> None:
                 # Display the Plotly figure
                 st.plotly_chart(fig, use_container_width=True)
 
-    # Summary tab (send ALL rows & ALL columns to the LLM)
-    summary_tabs = st.tabs(["Summary"])
-    with summary_tabs[0]:
-        
-        # Convert entire DataFrame to JSON-friendly string‐dict
-        sample_rows_summary = df.astype(str).to_dict(orient="list")
+    # Summary + Insights tabs (run in parallel)
+    summary_tab, insights_tab = st.tabs(["Summary", "Insights"])
 
-        # Combine full chat history as a single string
-        chat_history_str = join_chat_history()
+    # Prepare full DataFrame JSON and chat history once
+    sample_rows_summary = df.astype(str).to_dict(orient="list")
+    chat_history_str = join_chat_history()
 
-        # Ask the LLM for a structured summary (pass summary‐specific constants)
+    # Kick off both LLM calls in threads
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+    future_summary = executor.submit(
+        get_summary,
+        json.dumps(schema_dict),
+        json.dumps(sample_rows_summary),
+        chat_history_str,
+        MODEL_NAME_SUMMARY,
+        SUMMARY_TEMPERATURE,
+        SUMMARY_MAX_TOKENS,
+    )
+    future_insights = executor.submit(
+        get_insights,
+        json.dumps(schema_dict),
+        json.dumps(sample_rows_summary),
+        chat_history_str,
+        MODEL_NAME_SUMMARY,
+        SUMMARY_TEMPERATURE,
+        SUMMARY_MAX_TOKENS,
+    )
+
+    # Render Summary when ready
+    with summary_tab:
         with st.spinner("Generating summary…"):
-            summary = get_summary(
-                schema_json=json.dumps(schema_dict),
-                sample_json=json.dumps(sample_rows_summary),
-                chat_history=chat_history_str,
-                model_name=MODEL_NAME_SUMMARY,
-                temperature=SUMMARY_TEMPERATURE,
-                max_tokens=SUMMARY_MAX_TOKENS,
-            )
+            summary = future_summary.result()
+            st.markdown(summary)
 
-        st.markdown(summary)
+    # Render Insights when ready
+    with insights_tab:
+        with st.spinner("Generating insights…"):
+            insights = future_insights.result()
+            st.markdown(insights)
 
 
 def render_sql_item(item: Dict[str, Any]) -> None:
