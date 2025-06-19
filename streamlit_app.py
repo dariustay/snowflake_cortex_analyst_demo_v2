@@ -166,36 +166,35 @@ def display_data_and_chart(df: pd.DataFrame) -> None:
     sample_rows_summary = df.astype(str).to_dict(orient="list")
     chat_history_str = join_chat_history()
 
-    # Kick off both LLM calls in threads
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-    future_summary = executor.submit(
-        get_summary,
-        json.dumps(schema_dict),
-        json.dumps(sample_rows_summary),
-        chat_history_str,
-        MODEL_NAME_SUMMARY,
-        SUMMARY_TEMPERATURE,
-        SUMMARY_MAX_TOKENS,
-    )
-    future_insights = executor.submit(
-        get_insights,
-        json.dumps(schema_dict),
-        json.dumps(sample_rows_summary),
-        chat_history_str,
-        MODEL_NAME_SUMMARY,
-        SUMMARY_TEMPERATURE,
-        SUMMARY_MAX_TOKENS,
-    )
 
-    # Render Summary when ready
+    # Render Summary
     with summary_tab:
         with st.spinner("Generating summary…"):
+            future_summary = executor.submit(
+                get_summary,
+                json.dumps(schema_dict),
+                json.dumps(sample_rows_summary),
+                chat_history_str,
+                MODEL_NAME_SUMMARY,
+                SUMMARY_TEMPERATURE,
+                SUMMARY_MAX_TOKENS,
+            )
             summary = future_summary.result()
             st.markdown(summary)
 
-    # Render Insights when ready
+    # Render Insights
     with insights_tab:
         with st.spinner("Generating insights…"):
+            future_insights = executor.submit(
+                get_insights,
+                json.dumps(schema_dict),
+                json.dumps(sample_rows_summary),
+                chat_history_str,
+                MODEL_NAME_SUMMARY,
+                SUMMARY_TEMPERATURE,
+                SUMMARY_MAX_TOKENS,
+            )
             insights = future_insights.result()
             st.markdown(insights)
 

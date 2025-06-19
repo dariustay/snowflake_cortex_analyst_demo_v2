@@ -132,11 +132,14 @@ def _build_insights_prompt(schema_json: str, sample_json: str, chat_history: str
       2. Sample rows: {examples}
       3. The chat history: {chat_history}
     
-    Generate **3–5** concise, **actionable** bullet-point recommendations. **Formatting rules**:
+    Generate 3–5 concise, actionable bullet-point recommendations. Formatting rules:
       • Start each bullet with a verb (e.g., “Investigate…”, “Monitor…”, “Optimize…”).  
       • Always use exactly one space before and after parentheses, e.g., “January (55,919) to February (42,299)”.  
-      • Represent numeric ranges with an en-dash **without** spaces, e.g., “46,000–50,000”.  
-      • Include the “$” currency symbol immediately before numbers (no extra spaces).  
+      • There is exactly one space after every comma, period, and colon.
+      • Each numeric value is separated from text by spaces, e.g., “2,303,341.09 followed by Toys at 2,271,034.59”.
+      • Do not concatenate words and numbers: e.g., write “2,078,830.10 and 2,040,084.60” not “2,078,830.10and2,040,084.60”.
+      • Numeric ranges appear as “X to Y” with a single space on each side of “to”.
+    
     Return **only** the bullet list—no extra sentences or numbering.
     """.strip()
     return instructions.format(
