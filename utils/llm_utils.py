@@ -93,7 +93,8 @@ def _build_summary_prompt(schema_json: str, sample_json: str, chat_history: str)
       - The lowest daily revenue values range from 9,549.32 to 9,913.01 with minimal variation.
       - No extreme outliers are present; most values stay within a tight band.
     
-    Return only the structured summary (following the style shown above). 
+    Return only the structured summary (following the style shown above).
+    If there are bullet points, keep it to 3–5 bullet points.
     Do NOT mention the user’s original questions or next steps.
     """.strip()
 
