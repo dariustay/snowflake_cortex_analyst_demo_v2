@@ -18,14 +18,14 @@ FILE     = "revenue_timeseries.yaml"
 
 MAX_SAMPLE_ROWS = 10
 
-MODEL_NAME_SUMMARY = "claude-3-5-sonnet"
 MODEL_NAME_CHART   = "claude-3-5-sonnet"
-
-SUMMARY_TEMPERATURE = 0.1
-SUMMARY_MAX_TOKENS  = 500
+MODEL_NAME_INSIGHTS = "claude-3-5-sonnet"
 
 CHART_TEMPERATURE = 0.1
 CHART_MAX_TOKENS  = 750
+
+INSIGHTS_TEMPERATURE = 0.1
+INSIGHTS_MAX_TOKENS  = 500
 
 
 # === Helper Functions ===
@@ -34,13 +34,16 @@ def send_message(prompt: str) -> Dict[str, Any]:
     """
     Send a user prompt with the chat history to the Snowflake Cortex Analyst API and return the parsed JSON response.
     """
+
+    limit = st.session_state.get("num_chat_messages", len(st.session_state.messages))
+    subset = st.session_state.messages[-limit:]
     
     messages_payload = [
         {
             "role": "analyst" if msg["role"] == "assistant" else msg["role"],
             "content": msg["content"]
         }
-        for msg in st.session_state.messages
+        for msg in subset
     ]
 
     request_body = {
@@ -69,8 +72,12 @@ def join_chat_history() -> str:
     Convert all chat messages in st.session_state.messages into one newline-separated string of "ROLE: text" lines.
     """
     
+    limit = st.session_state.get("num_chat_messages", len(st.session_state.messages))
+    subset = st.session_state.messages[-limit:]
+    
     lines: List[str] = []
-    for msg in st.session_state.messages:
+    
+    for msg in subset:
         role = msg["role"].upper()
         for chunk in msg["content"]:
             if chunk["type"] == "text":
@@ -89,7 +96,7 @@ def build_chart_sample(df: pd.DataFrame, max_rows: int = MAX_SAMPLE_ROWS) -> Dic
     return sample_df.to_dict(orient="list")
 
 
-def display_data_and_chart(df: pd.DataFrame) -> None:
+def display_data_chart_insights(df: pd.DataFrame) -> None:
     """
     Given a Pandas DataFrame, render:
       • a “Data” tab with st.dataframe(df)
@@ -99,11 +106,11 @@ def display_data_and_chart(df: pd.DataFrame) -> None:
            – Tries exec‐ing that code 3 times via execute_plotly_code()
            – If successful, shows the Plotly figure + an expander with the raw code
            – Otherwise, shows an error
-      • a “Summary” tab that:
-           – Sends ALL columns & ALL rows to get_summary(...) with summary‐specific LLM parameters
-           – Renders the LLM’s structured summary
+      • “Summary” and  “Insights” tabs that:
+           – Sends ALL columns & ALL rows to get_summary(...) and get_insights(...) with specific LLM parameters
+           – Renders the LLM’s structured summary and insights
 
-    If df has 0 or 1 rows, we skip Chart+Summary and simply show the table.
+    If df has 0 or 1 rows, we skip Chart+Summary+Insights and simply show the table.
     """
     
     # If there are no rows or only a single row, just display the DataFrame
@@ -163,7 +170,7 @@ def display_data_and_chart(df: pd.DataFrame) -> None:
     summary_tab, insights_tab = st.tabs(["Summary", "Insights"])
 
     # Prepare full DataFrame JSON and chat history once
-    sample_rows_summary = df.astype(str).to_dict(orient="list")
+    sample_rows_insights = df.astype(str).to_dict(orient="list")
     chat_history_str = join_chat_history()
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
@@ -174,11 +181,11 @@ def display_data_and_chart(df: pd.DataFrame) -> None:
             future_summary = executor.submit(
                 get_summary,
                 json.dumps(schema_dict),
-                json.dumps(sample_rows_summary),
+                json.dumps(sample_rows_insights),
                 chat_history_str,
-                MODEL_NAME_SUMMARY,
-                SUMMARY_TEMPERATURE,
-                SUMMARY_MAX_TOKENS,
+                MODEL_NAME_INSIGHTS,
+                INSIGHTS_TEMPERATURE,
+                INSIGHTS_MAX_TOKENS,
             )
             summary = future_summary.result()
             st.markdown(summary)
@@ -189,11 +196,11 @@ def display_data_and_chart(df: pd.DataFrame) -> None:
             future_insights = executor.submit(
                 get_insights,
                 json.dumps(schema_dict),
-                json.dumps(sample_rows_summary),
+                json.dumps(sample_rows_insights),
                 chat_history_str,
-                MODEL_NAME_SUMMARY,
-                SUMMARY_TEMPERATURE,
-                SUMMARY_MAX_TOKENS,
+                MODEL_NAME_INSIGHTS,
+                INSIGHTS_TEMPERATURE,
+                INSIGHTS_MAX_TOKENS,
             )
             insights = future_insights.result()
             st.markdown(insights)
@@ -204,7 +211,7 @@ def render_sql_item(item: Dict[str, Any]) -> None:
     Handle a single LLM-returned SQL block:
       1) Show raw SQL in a collapsed expander
       2) Execute SQL (cached via get_cached_df) → Pandas DataFrame
-      3) Call display_data_and_chart() on the resulting DataFrame
+      3) Call display_data_chart_insights() on the resulting DataFrame
     """
     
     sql = item["statement"]
@@ -220,8 +227,8 @@ def render_sql_item(item: Dict[str, Any]) -> None:
         st.error(f"SQL execution failed: {e}")
         return
 
-    # Display Data + Chart + Summary
-    display_data_and_chart(df)
+    # Display Data + Chart + Summary + Insights
+    display_data_chart_insights(df)
 
 
 def render_message(content: List[Dict[str, Any]], message_index: int) -> None:
@@ -285,10 +292,15 @@ def process_message(prompt: str) -> None:
 
 def main():
 
-    # Sidebar: Show the semantic model file
-    st.sidebar.title("Configuration")
+    # Sidebar
     st.sidebar.markdown(f"**Semantic model**: `{FILE}`")
-    st.sidebar.markdown("---")
+    
+    with st.sidebar.expander("💬 Chat Settings", expanded=False):
+        num_chat_messages = st.number_input(
+            "History turns:", min_value=1, max_value=10, value=5
+        )
+    
+    st.session_state.num_chat_messages = num_chat_messages
 
     # Main title
     st.title("Revenue Timeseries Explorer")
