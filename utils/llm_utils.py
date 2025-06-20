@@ -22,6 +22,10 @@ def _build_chart_payload(schema_dict: Dict[str, str], sample_rows: Dict[str, Any
        • If there are two numeric columns (and no datetime), generate a scatter plot.
        • If there is only one numeric column, generate a histogram.
        • If there is one categorical column with ≤10 distinct values and no numeric column, generate a pie chart.
+       • If there are two numeric columns and one is a percentage (e.g. ends with “%”), generate a combo chart:
+         – Use go.Bar for the absolute values (first numeric column) on the primary y-axis.
+         – Overlay go.Scatter (mode='lines+markers') for the percentage on a secondary y-axis (yaxis='y2').
+         – Make sure to configure yaxis2 with `overlaying='y'`, `side='right'`, appropriate `tickformat`, and title.
     
     2. When you generate the Plotly code, ensure:
        • Axis labels and tick labels do not get cut off:
