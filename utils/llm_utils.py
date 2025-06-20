@@ -14,33 +14,26 @@ def _build_chart_payload(schema_dict: Dict[str, str], sample_rows: Dict[str, Any
     """
     
     instructions = """
-    You have a Pandas DataFrame called df and Plotly’s 'go' is already imported.
+     You have a Pandas DataFrame called df and Plotly’s 'go' is already imported.
     
-    1. Inspect the schema (column types) and sample rows to choose the most appropriate chart type, e.g.:
-       • If there is a datetime column and at least one numeric column, generate a line chart over time.
-       • If there is exactly one categorical (string) column and exactly one numeric column, generate a bar chart.
-       • If there are two numeric columns (and no datetime), generate a scatter plot.
-       • If there is only one numeric column, generate a histogram.
-       • If there is one categorical column with ≤10 distinct values and no numeric column, generate a pie chart.
-       • If there are two numeric columns and one is a percentage (e.g. ends with “%”), generate a combo chart:
-         – Use go.Bar for the absolute values (first numeric column) on the primary y-axis.
-         – Overlay go.Scatter (mode='lines+markers') for the percentage on a secondary y-axis (yaxis='y2').
-         – Make sure to configure yaxis2 with `overlaying='y'`, `side='right'`, appropriate `tickformat`, and title.
+     1. Inspect schema and data to pick the chart:
+        • **Time series**: If there’s a datetime column and ≥1 numeric, use line(s) over time.
+        • **Combo**: If there are exactly two numeric columns and one is percent (values in [0,1] or name contains '%'), use:
+           – go.Bar for the absolute values on the left y-axis.
+           – go.Scatter (mode='lines+markers') for the percentage on a secondary y-axis (`overlaying='y'`, `side='right'`, `tickformat='.0%'`).
+        • **Grouped bar**: If one categorical + >1 numeric, plot grouped bars.
+        • **Scatter**: If exactly two numerics and no datetime, scatter plot.
+        • **Histogram**: If one numeric and no datetime, histogram.
+        • **Top-N**: If categorical has >10 unique values, show only top 10 by value.
     
-    2. When you generate the Plotly code, ensure:
-       • Axis labels and tick labels do not get cut off:
-         – For y-axis tick labels (which can be long), use automargin=True, and set larger left margin (e.g., margin=dict(l=80, r=40, t=50, b=60)).
-         – For x-axis tick labels, also use automargin=True or rotate long labels (e.g., tickangle=-45).
-       • Use a light chart background (e.g., plot_bgcolor='#f9f9f9') so the chart stands out against the app.
-       • Keep grid lines visible: xaxis_showgrid=True, yaxis_showgrid=True.
-       • Each series or category must use distinct, qualitative colors.
-       • Title and axis titles reflect the column names clearly (e.g., “Sales Over Time” or “Category vs Amount”).
-       • Font size should be at least 12 for readability.
+     2. When generating code:
+        • Build dynamic titles and axis names from column headers.
+        • Rotate or wrap x-axis labels based on type and length.
+        • Use `plot_bgcolor='#f9f9f9'`, `automargin=True`, and sensible margins.
+        • Ensure legend and gridlines are visible.
+        • Return only Python code that defines `fig`.
     
-    3. Return only the final Python code snippet (no imports, no comments, no markdown fences) that:
-       • Creates the figure: fig = go.Figure().
-       • Adds the appropriate go.* trace(s) for the chosen chart type.
-       • Do NOT include fig.show().
+     3. Do NOT include `fig.show()` or comments.
     """.strip()
     
     payload = {
