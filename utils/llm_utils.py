@@ -16,7 +16,7 @@ def _build_chart_payload(schema_dict: Dict[str, str], sample_rows: Dict[str, Any
     instructions = """
     You have a Pandas DataFrame called df and Plotly’s 'go' is already imported.
     
-    1. Inspect schema and data to pick the chart:
+    1. Inspect schema and data to pick the most appropriate chart. Here are some guidelines:
         • **Time series**: If there’s a datetime column and ≥1 numeric, use line(s) over time.
         • **Combo**: If there are exactly two numeric columns and one is percent (values in [0,1] or name contains '%'), use:
            – go.Bar for the absolute values on the left y-axis.
@@ -24,7 +24,6 @@ def _build_chart_payload(schema_dict: Dict[str, str], sample_rows: Dict[str, Any
         • **Grouped bar**: If one categorical + >1 numeric, plot grouped bars.
         • **Scatter**: If exactly two numerics and no datetime, scatter plot.
         • **Histogram**: If one numeric and no datetime, histogram.
-        • **Top-N**: If categorical has >10 unique values, show only top 10 by value.
         
     2. When generating code:
         • Build dynamic titles and axis names from column headers.
