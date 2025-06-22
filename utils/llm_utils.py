@@ -14,25 +14,33 @@ def _build_chart_payload(schema_dict: Dict[str, str], sample_rows: Dict[str, Any
     """
     
     instructions = """
-    You have a Pandas DataFrame called df and Plotly’s 'go' is already imported.
+    You have a Pandas DataFrame `df` and Plotly’s `go` already available.  
+    Inspect the DataFrame schema and sample rows to choose the most appropriate visualization. Here are some guidelines:
+
+    1. **Select the chart type** based on the columns you find:
+       - **Time Series**: If there’s a date/time/datetime column and ≥1 numeric column, create a line chart showing each numeric series over time.
+       - **Bar Chart**: If there’s exactly one categorical column and one numeric column, create a simple bar chart.
+       - **Grouped Bar Chart**: If there’s one categorical column and multiple numeric columns, create a grouped bar chart (one bar series per numeric column) (`barmode='group'`).
+       - **Stacked Bar Chart**: If there’s one categorical column and multiple numeric columns that sum to a meaningful total, create a stacked bar chart (`barmode='stack'`).
+       - **Combo Chart**: If there are exactly two numeric columns and one represents percentages (values between 0–1 or name contains “%”), 
+         combine a bar chart (for absolute values) with a line‐with‐markers (for percentages) on a secondary y‐axis formatted as percentages.
+       - **Scatter Plot**: If there are exactly two numeric columns and no date/time/datetime or categorical column, create a scatter plot.
+       - **Histogram**: If there’s one numeric column and no date/time/datetime column, create a histogram.
+
+       Use the above as guidelines. Assess the Pandas DataFrame `df` provided and decide on the most appropriate chart.
     
-    1. Inspect schema and data to pick the most appropriate chart. Here are some guidelines:
-        • **Time series**: If there’s a datetime column and ≥1 numeric, use line(s) over time.
-        • **Combo**: If there are exactly two numeric columns and one is percent (values in [0,1] or name contains '%'), use:
-           – go.Bar for the absolute values on the left y-axis.
-           – go.Scatter (mode='lines+markers') for the percentage on a secondary y-axis (`overlaying='y'`, `side='right'`, `tickformat='.0%'`).
-        • **Grouped bar**: If one categorical + >1 numeric, plot grouped bars.
-        • **Scatter**: If exactly two numerics and no datetime, scatter plot.
-        • **Histogram**: If one numeric and no datetime, histogram.
-        
-    2. When generating code:
-        • Build dynamic titles and axis names from column headers.
-        • Rotate or wrap x-axis labels based on type and length.
-        • Use `plot_bgcolor='#f9f9f9'`, `automargin=True`, and sensible margins.
-        • Ensure legend and gridlines are visible.
-        • Return only Python code that defines `fig`.
+    2. **Generate dynamic labels**:
+       - Derive the chart title by combining the relevant column names (e.g., “Sales by Region Over Time”).
+       - Use the actual column names (with underscores replaced by spaces, title‐cased) for the x and y axis labels.
     
-    3. Do NOT include `fig.show()` or comments.
+    3. **Adjust layout for readability**:
+       - Rotate or wrap x‐axis labels if they are long or overlap (e.g., `fig.update_layout(xaxis_tickangle=45,...)`).
+       - Position the legend where it doesn’t obscure data.
+       - Format any percentage axis with tick labels shown as “0%”, “25%”, etc.
+    
+    4. **Output**:
+       - Return only Python Plotly code that defines `fig`.
+       - Do NOT include `fig.show()` or comments.
     """.strip()
     
     payload = {

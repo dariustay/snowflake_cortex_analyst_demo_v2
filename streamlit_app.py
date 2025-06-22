@@ -157,6 +157,10 @@ def display_data_chart_insights(df: pd.DataFrame) -> None:
                         continue
     
             if not chart_success or fig is None:
+
+                # # For debugging: Uncomment when needed
+                # st.code(plotly_code, language="python")
+                
                 st.error("Chart is not available.")
             else:
                 # Show raw Python code in a collapsible expander
